@@ -275,7 +275,7 @@ def plot_FFTmap(Data, meta, bin=None, bin_x=None, bin_y=None, x_unit=VOLT_UNIT, 
     y0, y1 = freq.min(), freq.max() 
     # frequency array return appears to be slightly broken for MATLAB script
 
-    if xlabel is None: xlabel = r'$I_{{bias}}$ [{}]'.format(x_unit)
+    if xlabel is None: xlabel = r'$V_{{bias}}$ [{}]'.format(x_unit)
     if ylabel is None: ylabel = r'$\nu$ [{}]'.format(y_unit)
     if title is None: title = meta['run_name']
 
@@ -316,6 +316,9 @@ def plotLine_Transport(Data, X, Y, Z, X1, Y1, X2, Y2, color='r', figsize=LIN_FIG
                    figsize=figsize, llabel=llabel, zlabel=zlabel, title=title)
 
     return fig
+
+# Tools for plotting results of landau
+#################################################################################################
 
 def plot_ridges(ridges, fig=None, figsize=FIG_SIZE, color='r', alpha=0.5, extent=None):
     if fig is None:
@@ -361,4 +364,21 @@ def plot_cluster_fits(clusters, fits, fig=None, figsize=FIG_SIZE, color='r',
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)
     
+    return fig
+
+# Tools for plotting cross correlations from sliders.py
+#################################################################################################
+
+def plot_cross_corr(CC, Vbticks, fticks, figsize=FFT_FIG_SIZE, cmap=CMAP, cscale='auto', q1=None, q2=None):
+    validate_cscale(cscale,q1,q2)
+
+    N, M = CC.shape
+    vmin, vmax = get_cscale(CC, cscale, q1, q2)
+
+    fig = plt.figure(figsize=figsize)
+    ax = fig.add_subplot(111)
+
+    extent = [Vbticks.min(), Vbticks.max(), fticks.max(), fticks.min()]
+    ax.imshow(CC, cmap=cmap, vmin=vmin, vmax=vmax, extent=extent, interpolation='none', aspect='auto')
+
     return fig
