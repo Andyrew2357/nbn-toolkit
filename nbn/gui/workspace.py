@@ -23,7 +23,8 @@ class workSpace(ttk.Frame):
         self.background.place(relx=0.5, rely=0.5, anchor='center')
 
         self.supported_jobs = {
-            'transport': dSet_transport
+            'transport': dSet_transport,
+            'generic': job
         }
 
         self.jobs = []
@@ -37,7 +38,8 @@ class workSpace(ttk.Frame):
         self.raise_icon_grid()
 
         # Logging configuration
-        logging.basicConfig(level=logging.INFO)        
+        logging.basicConfig(level=logging.INFO) 
+        self.logger = logging.getLogger()  
 
     def regrid_icons(self):
         for J in self.jobs: J.icon.grid_forget()
@@ -56,27 +58,30 @@ class workSpace(ttk.Frame):
                             padx=PX, pady=PY)
         self.regrid_icons()
         
-    def append_job(self, jobType, params):
+    def append_job(self, jobType, **kwargs):
         tag = f'J{self.jobind}'
         self.jobind+=1
-        J = self.supported_jobs[jobType](self, tag, params)
+        J = self.supported_jobs[jobType](self, tag, **kwargs)
         self.jobs.append(J)
         self.regrid_icons()
 
 # Handler for logging asynchronously to text widgets
 # I take from this forum post https://stackoverflow.com/questions/13318742/python-logging-to-tkinter-text-widget
 # which is itself adapted from Moshe Kaplan: https://gist.github.com/moshekaplan/c425f861de7bbf28ef06
+# I modified this to accound for different jobs
 #################################################################################################
 class TextHandler(logging.Handler):
     # This class allows you to log to a Tkinter Text or ScrolledText widget
-    def __init__(self, text):
+    def __init__(self, text, tag):
         # run the regular Handler __init__
         logging.Handler.__init__(self)
         # Store a reference to the Text it will log to
         self.text = text
+        self.tag = tag
 
     def emit(self, record):
         msg = self.format(record)
+        if not msg.startswith(self.tag): return
         def append():
             self.text.configure(state='normal')
             self.text.insert(tk.END, msg + '\n')
@@ -145,16 +150,19 @@ class dSet_transport(job):
         self.broadcast_log = scrolledtext.ScrolledText(self.fullscreen, state=tk.DISABLED)
         self.broadcast_log.pack(expand=True, fill='both')
 
+        if params is None: return
+
+        self.stable = True
         if status == 'old':
             self.init_from_local()
         else:
             self.broadcastHandler = TextHandler(self.broadcast_log)
-            self.logger = logging.getLogger()
-            self.logger.addHandler(self.broadcastHandler)
+            self.parent.logger.addHandler(self.broadcastHandler)
             if params['updating']:
-                self.update()
+                thread = threading.Thread(self.update)
+                thread.start()
             else:
-                self.init_from_sweeps()
+                thread = threading.Thread(self.init_from_sweeps)
 
     def save(self):
         print(self.icon.winfo_toplevel())
@@ -191,15 +199,23 @@ class dSet_transport(job):
         submit_button.grid(row=3, column=1, sticky='e', padx=5, pady=10)
 
     def init_from_local(self):
-        kwargs = {k:v for k, v in self.params.items() if k not in ('updating', 'stride')} 
-        kwargs['verbose'] = self.broadcast_log
-        self.transport_data.init_data_from_sweeps(**kwargs)
+        kwargs = {'path':self.params['path'], 'verbose':self.tag}
+        self.transport_data.init_data(**kwargs)
 
     def init_from_sweeps(self):
-        kwargs = {'path':self.params['path']}
-        self.transport_data.init_data
+        kwargs = {k:v for k, v in self.params.items() if k not in ('updating', 'stride')} 
+        kwargs['verbose'] = self.tag
+        kwargs['dbx'] = self.icon.winfo_toplevel().dbx
+        self.stable = False
+        self.transport_data.init_data_from_sweeps(**kwargs)
+        self.stable = True
 
     def update(self):
         kwargs = {k:v for k, v in self.params.items() if k not in ('updating',)}
-        kwargs['verbose'] = self.broadcast_log
-        self.transport_data.update_data_from_sweeps
+        kwargs['verbose'] = self.tag
+        kwargs['dbx'] = self.icon.winfo_toplevel().dbx
+        while self.params['updating']:
+            self.stable = False
+            self.transport_data.update_data_from_sweeps(**kwargs)
+            self.stable = True
+            time.sleep(DATA_REFRESH_TIME_SECONDS)

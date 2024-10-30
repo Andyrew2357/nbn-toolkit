@@ -15,13 +15,14 @@ class nbn_gui(tk.Tk):
         self.workspace = workSpace(self)
         self.workspace.pack(expand=True, fill='both')
 
-        self.workspace.append_job('transport', None)
-        self.workspace.append_job('transport', None)
-        self.workspace.append_job('transport', None)
-        self.workspace.append_job('transport', None)
-        self.workspace.append_job('transport', None)
-        self.workspace.append_job('transport', None)
-        self.workspace.append_job('transport', None)
+        self.workspace.append_job('transport', params=None, status='old')
+        self.workspace.append_job('generic')
+        # self.workspace.append_job('transport', None)
+        # self.workspace.append_job('transport', None)
+        # self.workspace.append_job('transport', None)
+        # self.workspace.append_job('transport', None)
+        # self.workspace.append_job('transport', None)
+        # self.workspace.append_job('transport', None)
 
 def launch():
 

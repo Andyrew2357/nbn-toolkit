@@ -36,7 +36,7 @@ ICON_GRID_ROWS = 5
 JOB_ICON_WIDTH = 200
 JOB_ICON_HEIGHT = 100
 
-DATA_REFRESH_TIME = 10000
+DATA_REFRESH_TIME_SECONDS = 10
 
 def popupmsg(msg, title="!", bmsg="OK."):
     popup = tk.Toplevel()

@@ -1,0 +1,84 @@
+{
+    "default_save_folder":"",
+    "dropbox_settings":{
+        "app_key":"",
+        "app_secret":""
+    },
+    "new_dSet_transport_settings":{
+        "source":"dropbox",
+        "updating":false,
+        "folder":"/S59_Noise_2/data",
+        "stride":0,
+        "run_name":"",
+        "skiprows":0,
+        "compression":"infer",
+        "colnames":{
+            "time":"#Timestamp", 
+            "Ix'": "Current_X (A)",
+            "Iy'": "Current_Y (A)",
+            "Vbg": "V_BG (V)",
+            "Ibg": "I_BG (A)",
+            "Vtg": "V_TG (V)",
+            "Itg": "I_TG (A)"
+        }
+    },
+    "new_dSet_FFT_settings":{
+        "source":"dropbox",
+        "folder":"/S59_Noise_2/data",
+        "run_name":"",
+        "skiprows":0,
+        "compression":"zip",
+        "dBmode":"power",
+        "colnames":{
+            "time":"#Timestamp", 
+            "spec":"Spec", 
+            "freq":"FREQ", 
+            "Vdd":"V_{dd} (V)", 
+            "Vss":"V_{ss} (V)", 
+            "Vbg":"V_{BG} (V)",
+            "Vtg":"V_{TG} (V)", 
+            "Vbias":"V_{Bias} (V)", 
+            "Ibias":"I_{Bias} (A)", 
+            "exc_freq":"Excitation Freq (Hz)",
+            "Vg":"Vg", 
+            "Vd":"Vd (V)"
+        }
+    },
+    "new_dSet_FFTb_settings":{
+        "source":"dropbox",
+        "folder":"/S59_Noise_2/data",
+        "run_name":"",
+        "null_run_name":"",
+        "skiprows":0,
+        "compression":"zip",
+        "dBmode":"power",
+        "colnames":{
+            "time":"#Timestamp", 
+            "spec":"Spec", 
+            "freq":"FREQ", 
+            "Vdd":"V_{dd} (V)", 
+            "Vss":"V_{ss} (V)", 
+            "Vbg":"V_{BG} (V)",
+            "Vtg":"V_{TG} (V)", 
+            "Vbias":"V_{Bias} (V)", 
+            "Ibias":"I_{Bias} (A)", 
+            "exc_freq":"Excitation Freq (Hz)",
+            "Vg":"Vg", 
+            "Vd":"Vd (V)"
+        },
+        "null_colnames":{
+            "time":"#Timestamp", 
+            "spec":"Spec", 
+            "freq":"FREQ", 
+            "Vdd":"V_{dd} (V)", 
+            "Vss":"V_{ss} (V)", 
+            "Vbg":"V_{BG} (V)",
+            "Vtg":"V_{TG} (V)", 
+            "Vbias":"V_{Bias} (V)", 
+            "Ibias":"I_{Bias} (A)", 
+            "exc_freq":"Excitation Freq (Hz)",
+            "Vg":"Vg", 
+            "Vd":"Vd (V)"
+        }
+    }
+}

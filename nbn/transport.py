@@ -1,4 +1,5 @@
 from . import *
+import logging
 
 REQUIRED_COLUMNS = ()
 
@@ -23,7 +24,8 @@ class Transport:
         return 'Transport()'
     
     def console_log(self, msg, verbose):
-        if verbose: print(msg)
+        if verbose is None: return
+        logging.info(f"{verbose}: {msg}")        
 
     #################################################################################################
 
@@ -57,13 +59,17 @@ class Transport:
             raise Exception("Column name 'ind' in colnames is protected. Please use a different name.")
         nameswap = {colnames[k]:k for k in colnames}
 
+        self.console_log(f"STARTING. source: {source}, folder: {folder}")
         match source:
             case 'local':
                 if not os.path.isdir(folder): raise FileNotFoundError(f"{folder} does not exist.")
                 sweep_paths = [os.path.join(folder, fname) for fname in os.listdir(folder)
                                if run_name in fname]
+                num_files = len(sweep_paths)
+                self.console_log(f"Initializing Data from {num_files} in Local Folder: {folder}", verbose)
                 
                 for p, path in enumerate(sweep_paths):
+                    self.console_log(f"Reading Data from {path} ... ({p+1}/{num_files})")
                     df = pd.read_csv(path, delimiter=r"\s*\t\s*", engine="python", skiprows=skiprows, 
                                      compression=compression).rename(nameswap, axis='columns')
                     df['ind'] = p
@@ -76,8 +82,11 @@ class Transport:
                 if dbx is None: raise Exception("dbx is required if source is 'dropbox'.")
                 sweep_paths = [f'{folder}/{fname}' for fname in dbx.listdir(folder)
                                if run_name in fname]
+                num_files = len(sweep_paths)
+                self.console_log(f"Initializing Data from {num_files} in Local Folder: {folder}", verbose)
                 
                 for p, path in enumerate(sweep_paths):
+                    self.console_log(f"Reading Data from {path} ... ({p+1}/{num_files})")
                     df = dbx.open_trace(path, skiprows=skiprows, 
                                     compression=compression).rename(nameswap, axis='columns')
                     df['ind'] = p

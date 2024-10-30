@@ -1,5 +1,6 @@
 from . import *
 from .file_utils import beautify_fft
+import logging
 
 REQUIRED_META_FIELDS = ('freq', 'Vbias')
 
@@ -16,7 +17,8 @@ class FFTmap:
         return 'FFTmap()'
 
     def console_log(self, msg, verbose):
-        if verbose: print(msg)
+        if verbose is None: return
+        logging.info(f"{verbose}: {msg}")
 
     #################################################################################################
     
