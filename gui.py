@@ -1,0 +1,1 @@
+if __name__=='__main__': from nbn.gui.launch import launch; launch()
