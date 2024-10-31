@@ -7,55 +7,47 @@ from ..fftmapb import FFTmapb
 import threading, logging, time
 from tkinter import scrolledtext
 
-PX, PY = 20, 20
-class workSpace(ttk.Frame):
+class workSpace(tk.Canvas):
     def __init__(self, parent):
         ttk.Frame.__init__(self, parent)
         self.parent = parent
         self.ncols = ICON_GRID_COLS
+        self.nrows = ICON_GRID_ROWS
 
         root = self.winfo_toplevel()
         W, H = root.winfo_screenwidth() - JOB_MENU_WIDTH, root.winfo_screenheight()
-
         self.bkgd_im = ImageTk.PhotoImage(Image.open(os.path.join(ASSETS_FOLDER, 
             'workspace_background.png')).resize((W, H), Image.LANCZOS))
         self.background = ttk.Label(self, image=self.bkgd_im)
         self.background.place(relx=0.5, rely=0.5, anchor='center')
+
+        self.jobs = []
+        self.jobind = 1
+
+        # Logging configuration
+        logging.basicConfig(level=logging.INFO) 
+        self.logger = logging.getLogger()  
 
         self.supported_jobs = {
             'transport': dSet_transport,
             'generic': job
         }
 
-        self.jobs = []
-        self.jobind = 1
-
-        self.icon_grid = tk.Frame(self, background='')
-        for r in range(ICON_GRID_ROWS): self.icon_grid.rowconfigure(r, weight=1)
-        for c in range(ICON_GRID_COLS): self.icon_grid.columnconfigure(c, weight=1)
-
-        self.icon_grid.pack_forget()
-        self.raise_icon_grid()
-
-        # Logging configuration
-        logging.basicConfig(level=logging.INFO) 
-        self.logger = logging.getLogger()  
-
     def regrid_icons(self):
-        for J in self.jobs: J.icon.grid_forget()
-
-        for i, J in enumerate(self.jobs): J.icon.grid(row=i//self.ncols, column=i%self.ncols,
-                                                        padx=10, pady=10)
+        for J in self.jobs: J.icon.place_forget()
+        PX, PY = 0.02, 0.02
+        for i, J in enumerate(self.jobs): J.icon.place(relx=PX+(i%self.ncols)/self.ncols, 
+                                                       rely=PY+(i//self.ncols)/self.nrows, 
+                                                       relwidth=1/self.ncols - 2*PX, 
+                                                       relheight=1/self.nrows - 2*PY)
             
     def raise_fullscreen(self, J):
-        self.icon_grid.pack_forget()
-        J.fullscreen.pack(expand=True, fill='both',
-                          padx=PX, pady=PY)
+        for j in self.jobs: j.icon.place_forget()
+        PX, PY = 0.02, 0.02
+        J.fullscreen.place(relx=PX, rely=PY, relwidth=1-2*PX, relheight=1-2*PY)
 
     def raise_icon_grid(self):
-        for J in self.jobs: J.fullscreen.pack_forget()
-        self.icon_grid.pack(expand=True, fill='both',
-                            padx=PX, pady=PY)
+        for J in self.jobs: J.fullscreen.place_forget()
         self.regrid_icons()
         
     def append_job(self, jobType, **kwargs):
@@ -63,7 +55,7 @@ class workSpace(ttk.Frame):
         self.jobind+=1
         J = self.supported_jobs[jobType](self, tag, **kwargs)
         self.jobs.append(J)
-        self.regrid_icons()
+        self.raise_icon_grid()
 
 # Handler for logging asynchronously to text widgets
 # I take from this forum post https://stackoverflow.com/questions/13318742/python-logging-to-tkinter-text-widget
@@ -94,61 +86,71 @@ class TextHandler(logging.Handler):
 # Skeleton for a generic job
 #################################################################################################
 
-class job_icon(tk.Canvas):
+class job_icon(ttk.Frame):
     def __init__(self, parent, tag):
-        tk.Canvas.__init__(self, parent, width=JOB_ICON_WIDTH, height=JOB_ICON_HEIGHT)
+        ttk.Frame.__init__(self, parent)
         self.tag = tag
 
-        self.L = tk.Label(self, font=NORM_FONT)
-        self.buttonframe = tk.Frame(self, background='')
-        self.fancyframe = tk.Frame(self, background='')
+        self.L = ttk.Label(self, font=NORM_FONT)
+        self.buttonframe = ttk.Frame(self)
+        self.fancyframe = ttk.Frame(self)
 
-
-        self.L.place(x=0, y=0, width=JOB_ICON_WIDTH, height=JOB_ICON_HEIGHT//5)
-        self.buttonframe.place(x=0, y=4*JOB_ICON_HEIGHT//5, 
-                               width=JOB_ICON_WIDTH, height=JOB_ICON_HEIGHT//5)
-        self.fancyframe.place(x=0, y=JOB_ICON_HEIGHT//5, 
-                               width=JOB_ICON_WIDTH, height=3*JOB_ICON_HEIGHT//5)
+        self.L.place(relx=0, rely=0, relwidth=1, relheight=0.2)
+        self.fancyframe.place(relx=0, rely=0.2, relwidth=1, relheight=0.6)
+        self.buttonframe.place(relx=0, rely=0.8, relwidth=1, relheight=0.2)
 
         retag(self.tag, self, self.L, self.buttonframe, self.fancyframe)
 
-class job_fullscreen(tk.Frame):
-    def __init__(self, parent):
-        tk.Frame.__init__(self, parent, background='')
-        self.parent=parent
+class job_fullscreen(ttk.Frame):
+    def __init__(self, parent, tag):
+        ttk.Frame.__init__(self, parent)
+        self.tag = tag
+        self.parent = parent
         self.menubar = ttk.Frame(self)
-        self.menubar.place(x=0, y=0, relwidth=1)
+        self.menubar.place(relx=0, rely=0, relwidth=1, relheight=0.05)
+        self.palette = ttk.Frame(self)
+        self.palette.place(relx=0, rely=0.05, relwidth=1, relheight=0.95)
 
-        exit_button = ttk.Button(self.menubar, text='Exit', command=self.parent.raise_icon_grid)
-        exit_button.pack()
+        exit_button = ButtonWithTip(self.menubar, ttip="Exit", 
+                        command=self.parent.raise_icon_grid,
+                        image=os.path.join(ASSETS_FOLDER, 'exit_button.png'),
+                        size=(20, 20))
+        exit_button.pack(anchor='e', side='right', expand=True, fill='y')
+
 
 class job():
     def __init__(self, parent, tag):
         self.parent = parent
         self.tag = tag
-        self.icon = job_icon(parent.icon_grid, tag)
-        self.fullscreen = job_fullscreen(parent)
+        self.icon = job_icon(parent, tag)
+        self.fullscreen = job_fullscreen(parent, tag)
         self.icon.bind_class(tag, '<Button-1>', self.raise_fullscreen)
 
     def raise_fullscreen(self, *args):
+        print(f'raising {self.tag}')
         self.parent.raise_fullscreen(self)
+
 
 # Dataset managers
 #################################################################################################
 
 class dSet_transport(job):
     def __init__(self, parent, tag, params, status):
-        super().__init__(parent, tag)
+        job.__init__(self, parent, tag)
         self.transport_data = Transport()
         self.params = params
         
         self.icon.L.config(text=f"{tag} - Transport Dataset")
         save_button = ButtonWithTip(self.icon.buttonframe, ttip="Save Dataset", 
                 command=self.save, image=os.path.join(ASSETS_FOLDER, 'save_icon.png'), size=(10, 10))
-        save_button.pack()
+        save_button.pack(anchor='e', side='left')
 
-        self.broadcast_log = scrolledtext.ScrolledText(self.fullscreen, state=tk.DISABLED)
-        self.broadcast_log.pack(expand=True, fill='both')
+        self.broadcast_log = scrolledtext.ScrolledText(self.fullscreen.palette, state=tk.DISABLED)
+        self.broadcast_log.pack(expand=True, fill='both', padx=10, pady=10)
+        self.broadcast_log.configure(state='normal')
+        self.broadcast_log.insert(tk.END, f"Starting New Transport Dataset Job {self.tag}...\n")
+        self.broadcast_log.configure(state='disabled')
+        self.broadcast_log.yview(tk.END)
 
         if params is None: return
 
@@ -163,6 +165,7 @@ class dSet_transport(job):
                 thread.start()
             else:
                 thread = threading.Thread(self.init_from_sweeps)
+                thread.start()
 
     def save(self):
         print(self.icon.winfo_toplevel())
