@@ -153,7 +153,7 @@ class saved_dSet(ttk.Frame):
         self.params_form = ttk.Frame(self)
         
         self.save_dir = tk.StringVar()
-        self.save_box = DirEntry(self.params_form, self.save_dir)
+        self.save_box = DirEntry(self.params_form, self.save_dir, file_query=True)
         
         self.updating = tk.IntVar()
         self.upd_box = ttk.Checkbutton(self.params_form, text="Updating", variable=self.updating)
@@ -184,6 +184,8 @@ class saved_dSet_Transport(saved_dSet):
 
     def append_to_workspace(self, *args):
         kwargs = {'path':self.save_dir.get()}
+        self.winfo_toplevel().workspace.append_job('transport', params=kwargs, status='old')
+        self.close()
 
 class saved_dSet_FFT(saved_dSet):
     def __init__(self, parent):
@@ -346,6 +348,8 @@ class new_dSet_Transport(new_dSet):
             'colnames'   : 
             literal_eval('{'+ self.colnames_box.get('1.0', tk.END).strip().replace('\n','')+'}')
         }
+        self.winfo_toplevel().workspace.append_job('transport', params=kwargs, status='new')
+        self.close()
 
 class new_dSet_FFT(new_dSet):
     def __init__(self, parent):

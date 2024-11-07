@@ -131,11 +131,14 @@ class SearchableButtons(ttk.Frame):
         query.trace_add('write', grid_Bframe)
 
 class DirEntry(ttk.Frame):
-    def __init__(self, parent, pathvar, width=20):
+    def __init__(self, parent, pathvar, width=20, file_query=False):
         ttk.Frame.__init__(self, parent, width=width)
 
         def browse():
-            filename = filedialog.askdirectory()
+            if file_query:
+                filename = filedialog.askopenfilename()
+            else:
+                filename = filedialog.askdirectory()
             pathvar.set(filename)
 
         self.text_box = ttk.Entry(self, textvariable=pathvar, font=NORM_FONT, width=width)

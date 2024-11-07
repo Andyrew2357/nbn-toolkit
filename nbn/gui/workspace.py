@@ -127,7 +127,6 @@ class job():
         self.icon.bind_class(tag, '<Button-1>', self.raise_fullscreen)
 
     def raise_fullscreen(self, *args):
-        print(f'raising {self.tag}')
         self.parent.raise_fullscreen(self)
 
 
@@ -158,17 +157,16 @@ class dSet_transport(job):
         if status == 'old':
             self.init_from_local()
         else:
-            self.broadcastHandler = TextHandler(self.broadcast_log)
+            self.broadcastHandler = TextHandler(self.broadcast_log, self.tag)
             self.parent.logger.addHandler(self.broadcastHandler)
             if params['updating']:
-                thread = threading.Thread(self.update)
+                thread = threading.Thread(target=self.update, args=[])
                 thread.start()
             else:
-                thread = threading.Thread(self.init_from_sweeps)
+                thread = threading.Thread(target=self.init_from_sweeps, args=[])
                 thread.start()
 
     def save(self):
-        print(self.icon.winfo_toplevel())
         savePage = tk.Toplevel(self.icon.winfo_toplevel())
         savePage.wm_title(f"Save Data from {self.tag}")
 
@@ -202,8 +200,14 @@ class dSet_transport(job):
         submit_button.grid(row=3, column=1, sticky='e', padx=5, pady=10)
 
     def init_from_local(self):
-        kwargs = {'path':self.params['path'], 'verbose':self.tag}
+        kwargs = {'path':self.params['path']}
         self.transport_data.init_data(**kwargs)
+        self.broadcast_log.pack(expand=True, fill='both', padx=10, pady=10)
+        self.broadcast_log.configure(state='normal')
+        self.broadcast_log.insert(tk.END, 
+                f"{self.tag}: Loaded Data from {self.params['path']}\n")
+        self.broadcast_log.configure(state='disabled')
+        self.broadcast_log.yview(tk.END)
 
     def init_from_sweeps(self):
         kwargs = {k:v for k, v in self.params.items() if k not in ('updating', 'stride')} 

@@ -59,7 +59,7 @@ class Transport:
             raise Exception("Column name 'ind' in colnames is protected. Please use a different name.")
         nameswap = {colnames[k]:k for k in colnames}
 
-        self.console_log(f"STARTING. source: {source}, folder: {folder}")
+        self.console_log(f"STARTING. source: {source}, folder: {folder}", verbose)
         match source:
             case 'local':
                 if not os.path.isdir(folder): raise FileNotFoundError(f"{folder} does not exist.")
@@ -69,7 +69,7 @@ class Transport:
                 self.console_log(f"Initializing Data from {num_files} in Local Folder: {folder}", verbose)
                 
                 for p, path in enumerate(sweep_paths):
-                    self.console_log(f"Reading Data from {path} ... ({p+1}/{num_files})")
+                    self.console_log(f"Reading Data from {path} ... ({p+1}/{num_files})", verbose)
                     df = pd.read_csv(path, delimiter=r"\s*\t\s*", engine="python", skiprows=skiprows, 
                                      compression=compression).rename(nameswap, axis='columns')
                     df['ind'] = p
@@ -86,7 +86,7 @@ class Transport:
                 self.console_log(f"Initializing Data from {num_files} in Local Folder: {folder}", verbose)
                 
                 for p, path in enumerate(sweep_paths):
-                    self.console_log(f"Reading Data from {path} ... ({p+1}/{num_files})")
+                    self.console_log(f"Reading Data from {path} ... ({p+1}/{num_files})", verbose)
                     df = dbx.open_trace(path, skiprows=skiprows, 
                                     compression=compression).rename(nameswap, axis='columns')
                     df['ind'] = p
