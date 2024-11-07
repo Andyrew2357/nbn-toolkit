@@ -74,14 +74,17 @@ class FFTmap:
         meta = {k:[] for k in colnames if k not in ('spec', 'freq')}
         nameswap = {colnames[k]:k for k in colnames}
 
+        self.console_log(f"STARTING. source: {source}, folder: {folder}", verbose)
         match source:
             case 'local':
                 if not os.path.isdir(folder): raise FileNotFoundError(f"{folder} does not exist.")
                 sweep_paths = [os.path.join(folder, fname) for fname in os.listdir(folder)
                                if run_name in fname]
-                
                 N=len(sweep_paths)
+                self.console_log(f"Initializing Data from {N} in Local Folder: {folder}", verbose)
+
                 for p, path in enumerate(sweep_paths):
+                    self.console_log(f"Reading Data from {path} ... ({p+1}/{N})", verbose)
                     df = pd.read_csv(path, delimiter=r"\s*\t\s*", engine="python", 
                                 skiprows=skiprows, compression=compression)
                     df = beautify_fft(df).rename(nameswap, axis='columns')
@@ -101,9 +104,11 @@ class FFTmap:
                 if dbx is None: raise Exception("dbx is required if source is 'dropbox'.")
                 sweep_paths = [f'{folder}/{fname}' for fname in dbx.listdir(folder) 
                                if run_name in fname]
-                
                 N=len(sweep_paths)
+                self.console_log(f"Initializing Data from {N} in Local Folder: {folder}", verbose)
+
                 for p, path in enumerate(sweep_paths):
+                    self.console_log(f"Reading Data from {path} ... ({p+1}/{N})", verbose)
                     df = dbx.open_fft(path, skiprows=skiprows, 
                             compression=compression).rename(nameswap, axis='columns')
                     

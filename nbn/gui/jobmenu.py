@@ -194,6 +194,8 @@ class saved_dSet_FFT(saved_dSet):
 
     def append_to_workspace(self, *args):
         kwargs = {'path':self.save_dir.get()}
+        self.winfo_toplevel().workspace.append_job('FFTmap', params=kwargs, status='old')
+        self.close()
 
 class saved_dSet_FFTb(saved_dSet):
     def __init__(self, parent):
@@ -202,6 +204,8 @@ class saved_dSet_FFTb(saved_dSet):
 
     def append_to_workspace(self, *args):
         kwargs = {'path':self.save_dir.get()}
+        self.winfo_toplevel().workspace.append_job('FFTmapb', params=kwargs, status='old')
+        self.close()
 
 # Loading New Data
 #################################################################################################
@@ -452,6 +456,8 @@ class new_dSet_FFT(new_dSet):
             'colnames'   : 
             literal_eval('{'+ self.colnames_box.get('1.0', tk.END).strip().replace('\n','')+'}')
         }
+        self.winfo_toplevel().workspace.append_job('FFTmap', params=kwargs, status='new')
+        self.close()
         
 class new_dSet_FFTb(new_dSet):
     def __init__(self, parent):
@@ -586,4 +592,7 @@ class new_dSet_FFTb(new_dSet):
             kwargs['null_colnames'] = literal_eval('{'+ 
                 self.null_colnames_box.get('1.0', tk.END).strip().replace('\n','')+'}')
             
+        self.winfo_toplevel().workspace.append_job('FFTmapb', params=kwargs, status='new')
+        self.close()
+        
 #################################################################################################

@@ -85,10 +85,13 @@ class FFTmapb:
         elif not set(colnames) == set(null_colnames):
             raise Exception("colnames and null_colnames must have the same keys.")
 
+        self.console_log(f"STARTING. source: {source}, folder: {folder}", verbose)
+        self.console_log("Initializing Bias Sweep Data...", verbose)
         spectra, meta_spectra = self.init_partial_from_sweeps(folder, run_name, colnames, 
-            source=source, dbx=dbx, skiprows=skiprows, compression=compression)
+            source=source, dbx=dbx, skiprows=skiprows, compression=compression, verbose=verbose)
+        self.console_log("Initializing Null Sweep Data...", verbose)
         background, meta_background = self.init_partial_from_sweeps(folder, null_run_name, 
-            null_colnames, source=source, dbx=dbx, skiprows=skiprows, compression=compression)
+            null_colnames, source=source, dbx=dbx, skiprows=skiprows, compression=compression, verbose=verbose)
     
         meta = {}
         for k in meta_spectra:
@@ -107,7 +110,7 @@ class FFTmapb:
         self.meta = meta
 
     def init_partial_from_sweeps(self, folder, run_name, colnames, source='local', 
-                                 dbx=None, skiprows=None, compression='zip'):
+                                 dbx=None, skiprows=None, compression='zip', verbose=None):
         meta = {k:[] for k in colnames if k not in ('spec', 'freq')}
         nameswap = {colnames[k]:k for k in colnames}
 
@@ -116,9 +119,11 @@ class FFTmapb:
                 if not os.path.isdir(folder): raise FileNotFoundError(f"{folder} does not exist.")
                 sweep_paths = [os.path.join(folder, fname) for fname in os.listdir(folder)
                                if run_name in fname]
-                
                 N=len(sweep_paths)
+                self.console_log(f"Initializing Data from {N} in Local Folder: {folder}", verbose)
+
                 for p, path in enumerate(sweep_paths):
+                    self.console_log(f"Reading Data from {path} ... ({p+1}/{N})", verbose)
                     df = pd.read_csv(path, delimiter=r"\s*\t\s*", engine="python", 
                                 skiprows=skiprows, compression=compression)
                     df = beautify_fft(df).rename(nameswap, axis='columns')
@@ -138,9 +143,11 @@ class FFTmapb:
                 if dbx is None: raise Exception("dbx is required if source is 'dropbox'.")
                 sweep_paths = [f'{folder}/{fname}' for fname in dbx.listdir(folder) 
                                if run_name in fname]
-                
                 N=len(sweep_paths)
+                self.console_log(f"Initializing Data from {N} in Local Folder: {folder}", verbose)
+
                 for p, path in enumerate(sweep_paths):
+                    self.console_log(f"Reading Data from {path} ... ({p+1}/{N})", verbose)
                     df = dbx.open_fft(path, skiprows=skiprows, 
                             compression=compression).rename(nameswap, axis='columns')
                     

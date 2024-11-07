@@ -30,6 +30,8 @@ class workSpace(tk.Canvas):
 
         self.supported_jobs = {
             'transport': dSet_transport,
+            'FFTmap': dSet_FFTmap,
+            'FFTmapb': dSet_FFTmapb,
             'generic': job
         }
 
@@ -133,6 +135,7 @@ class job():
 # Dataset managers
 #################################################################################################
 
+# Transport
 class dSet_transport(job):
     def __init__(self, parent, tag, params, status):
         job.__init__(self, parent, tag)
@@ -185,9 +188,23 @@ class dSet_transport(job):
         def kill(): savePage.destroy()
 
         def submit(): 
-            self.transport_data.save_data_csv(save_folder.get(), 
-                                              None if ttag.get() == '' else ttag.get())
-            kill()
+            chosen_dir = save_folder.get()
+            chosen_fname = os.path.join(chosen_dir, self.transport_data.meta['run_name'] + '.json')
+            if os.path.isdir(chosen_fname):
+                popup = tk.Toplevel(self.icon.winfo_toplevel())
+                Lwarning = ttk.Label(popup, text=f"WARNING: {chosen_fname} already exists. Do you want to overwrite this file?")
+
+                def approve():
+                    self.transport_data.save_data_csv(chosen_dir, None if ttag.get() == '' else ttag.get())
+                    popup.destroy()
+                    kill()
+
+                reject_button = ttk.Button(popup, text="Cancel", command=popup.destroy)
+                approve_button = ttk.Button(popup, text="Approve", command=approve)
+
+            else:
+                self.transport_data.save_data_csv(chosen_dir, None if ttag.get() == '' else ttag.get())
+                kill()
 
         cancel_button = ttk.Button(container, text="Cancel", command=kill)
         submit_button = ttk.Button(container, text="Submit", command=submit)
@@ -226,3 +243,238 @@ class dSet_transport(job):
             self.transport_data.update_data_from_sweeps(**kwargs)
             self.stable = True
             time.sleep(DATA_REFRESH_TIME_SECONDS)
+
+# FFT
+class dSet_FFTmap(job):
+    def __init__(self, parent, tag, params, status):
+        job.__init__(self, parent, tag)
+        self.transport_data = FFTmap()
+        self.params = params
+        
+        self.icon.L.config(text=f"{tag} - FFTmap Dataset")
+        save_button = ButtonWithTip(self.icon.buttonframe, ttip="Save Dataset", 
+                command=self.save, image=os.path.join(ASSETS_FOLDER, 'save_icon.png'), size=(10, 10))
+        save_button.pack(anchor='e', side='left')
+
+        self.broadcast_log = scrolledtext.ScrolledText(self.fullscreen.palette, state=tk.DISABLED)
+        self.broadcast_log.pack(expand=True, fill='both', padx=10, pady=10)
+        self.broadcast_log.configure(state='normal')
+        self.broadcast_log.insert(tk.END, f"Starting New FFTmap Dataset Job {self.tag}...\n")
+        self.broadcast_log.configure(state='disabled')
+        self.broadcast_log.yview(tk.END)
+
+        if params is None: return
+
+        self.stable = True
+        if status == 'old':
+            self.init_from_local()
+        else:
+            self.broadcastHandler = TextHandler(self.broadcast_log, self.tag)
+            self.parent.logger.addHandler(self.broadcastHandler)
+            # if params['updating']:
+            #     thread = threading.Thread(target=self.update, args=[])
+            #     thread.start()
+            # else:
+            #     thread = threading.Thread(target=self.init_from_sweeps, args=[])
+            #     thread.start()
+            thread = threading.Thread(target=self.init_from_sweeps, args=[])
+            thread.start()            
+
+    def save(self):
+        savePage = tk.Toplevel(self.icon.winfo_toplevel())
+        savePage.wm_title(f"Save Data from {self.tag}")
+
+        container = ttk.Frame(savePage)
+        container.pack(expand=True, fill='both')
+
+        Lsave_folder = ttk.Label(container, text="Save Folder:", font=NORM_FONT)
+        save_folder = tk.StringVar()
+        save_folder_box = DirEntry(container, save_folder)
+        save_folder.set(CONFIG['default_save_folder'])
+
+        Lttag = ttk.Label(container, text="Tag:", font=NORM_FONT)
+        ttag = tk.StringVar()
+        ttag_box = ttk.Entry(container, textvariable=ttag)
+
+        def kill(): savePage.destroy()
+
+        def submit(): 
+            chosen_dir = save_folder.get()
+            chosen_fname = os.path.join(chosen_dir, self.transport_data.meta['run_name'] + '.json')
+            if os.path.isdir(chosen_fname):
+                popup = tk.Toplevel(self.icon.winfo_toplevel())
+                Lwarning = ttk.Label(popup, text=f"WARNING: {chosen_fname} already exists. Do you want to overwrite this file?")
+
+                def approve():
+                    self.transport_data.save_data_csv(chosen_dir, None if ttag.get() == '' else ttag.get())
+                    popup.destroy()
+                    kill()
+
+                reject_button = ttk.Button(popup, text="Cancel", command=popup.destroy)
+                approve_button = ttk.Button(popup, text="Approve", command=approve)
+                
+                Lwarning.grid(row=0, column=0, padx=10, pady=10, columnspan=2)
+                reject_button.grid(row=1, column=0, padx=10, pady=10)
+                approve_button.grid(row=1, column=1, padx=10, pady=10)
+
+            else:
+                self.transport_data.save_data_csv(chosen_dir, None if ttag.get() == '' else ttag.get())
+                kill()
+
+        cancel_button = ttk.Button(container, text="Cancel", command=kill)
+        submit_button = ttk.Button(container, text="Submit", command=submit)
+
+        Lsave_folder.grid(row=1, column=0, padx=5, pady=5)
+        save_folder_box.grid(row=1, column=1, padx=5, pady=5)
+        Lttag.grid(row=2, column=0, padx=5, pady=5)
+        ttag_box.grid(row=2, column=1, padx=5, pady=5)
+        cancel_button.grid(row=3, column=0, sticky='w', padx=5, pady=10)
+        submit_button.grid(row=3, column=1, sticky='e', padx=5, pady=10)
+
+    def init_from_local(self):
+        kwargs = {'path':self.params['path']}
+        self.transport_data.init_data(**kwargs)
+        self.broadcast_log.pack(expand=True, fill='both', padx=10, pady=10)
+        self.broadcast_log.configure(state='normal')
+        self.broadcast_log.insert(tk.END, 
+                f"{self.tag}: Loaded Data from {self.params['path']}\n")
+        self.broadcast_log.configure(state='disabled')
+        self.broadcast_log.yview(tk.END)
+
+    def init_from_sweeps(self):
+        # kwargs = {k:v for k, v in self.params.items() if k not in ('updating', 'stride')}
+        kwargs = {k:v for k, v in self.params.items()} 
+        kwargs['verbose'] = self.tag
+        kwargs['dbx'] = self.icon.winfo_toplevel().dbx
+        self.stable = False
+        self.transport_data.init_data_from_sweeps(**kwargs)
+        self.stable = True
+
+    # def update(self):
+    #     kwargs = {k:v for k, v in self.params.items() if k not in ('updating',)}
+    #     kwargs['verbose'] = self.tag
+    #     kwargs['dbx'] = self.icon.winfo_toplevel().dbx
+    #     while self.params['updating']:
+    #         self.stable = False
+    #         self.transport_data.update_data_from_sweeps(**kwargs)
+    #         self.stable = True
+    #         time.sleep(DATA_REFRESH_TIME_SECONDS)
+
+# FFTb
+class dSet_FFTmapb(job):
+    def __init__(self, parent, tag, params, status):
+        job.__init__(self, parent, tag)
+        self.transport_data = FFTmapb()
+        self.params = params
+        
+        self.icon.L.config(text=f"{tag} - FFTmap Dataset")
+        save_button = ButtonWithTip(self.icon.buttonframe, ttip="Save Dataset", 
+                command=self.save, image=os.path.join(ASSETS_FOLDER, 'save_icon.png'), size=(10, 10))
+        save_button.pack(anchor='e', side='left')
+
+        self.broadcast_log = scrolledtext.ScrolledText(self.fullscreen.palette, state=tk.DISABLED)
+        self.broadcast_log.pack(expand=True, fill='both', padx=10, pady=10)
+        self.broadcast_log.configure(state='normal')
+        self.broadcast_log.insert(tk.END, f"Starting New FFTmap Dataset Job {self.tag}...\n")
+        self.broadcast_log.configure(state='disabled')
+        self.broadcast_log.yview(tk.END)
+
+        if params is None: return
+
+        self.stable = True
+        if status == 'old':
+            self.init_from_local()
+        else:
+            self.broadcastHandler = TextHandler(self.broadcast_log, self.tag)
+            self.parent.logger.addHandler(self.broadcastHandler)
+            # if params['updating']:
+            #     thread = threading.Thread(target=self.update, args=[])
+            #     thread.start()
+            # else:
+            #     thread = threading.Thread(target=self.init_from_sweeps, args=[])
+            #     thread.start()
+            thread = threading.Thread(target=self.init_from_sweeps, args=[])
+            thread.start()            
+
+    def save(self):
+        savePage = tk.Toplevel(self.icon.winfo_toplevel())
+        savePage.wm_title(f"Save Data from {self.tag}")
+
+        container = ttk.Frame(savePage)
+        container.pack(expand=True, fill='both')
+
+        Lsave_folder = ttk.Label(container, text="Save Folder:", font=NORM_FONT)
+        save_folder = tk.StringVar()
+        save_folder_box = DirEntry(container, save_folder)
+        save_folder.set(CONFIG['default_save_folder'])
+
+        Lttag = ttk.Label(container, text="Tag:", font=NORM_FONT)
+        ttag = tk.StringVar()
+        ttag_box = ttk.Entry(container, textvariable=ttag)
+
+        def kill(): savePage.destroy()
+
+        def submit(): 
+            chosen_dir = save_folder.get()
+            chosen_fname = os.path.join(chosen_dir, self.transport_data.meta['run_name'] + '.json')
+            if os.path.isdir(chosen_fname):
+                popup = tk.Toplevel(self.icon.winfo_toplevel())
+                Lwarning = ttk.Label(popup, text=f"WARNING: {chosen_fname} already exists. Do you want to overwrite this file?")
+
+                def approve():
+                    self.transport_data.save_data_csv(chosen_dir, None if ttag.get() == '' else ttag.get())
+                    popup.destroy()
+                    kill()
+
+                reject_button = ttk.Button(popup, text="Cancel", command=popup.destroy)
+                approve_button = ttk.Button(popup, text="Approve", command=approve)
+                
+                Lwarning.grid(row=0, column=0, padx=10, pady=10, columnspan=2)
+                reject_button.grid(row=1, column=0, padx=10, pady=10)
+                approve_button.grid(row=1, column=1, padx=10, pady=10)
+
+            else:
+                self.transport_data.save_data_csv(chosen_dir, None if ttag.get() == '' else ttag.get())
+                kill()
+
+        cancel_button = ttk.Button(container, text="Cancel", command=kill)
+        submit_button = ttk.Button(container, text="Submit", command=submit)
+
+        Lsave_folder.grid(row=1, column=0, padx=5, pady=5)
+        save_folder_box.grid(row=1, column=1, padx=5, pady=5)
+        Lttag.grid(row=2, column=0, padx=5, pady=5)
+        ttag_box.grid(row=2, column=1, padx=5, pady=5)
+        cancel_button.grid(row=3, column=0, sticky='w', padx=5, pady=10)
+        submit_button.grid(row=3, column=1, sticky='e', padx=5, pady=10)
+
+    def init_from_local(self):
+        kwargs = {'path':self.params['path']}
+        self.transport_data.init_data(**kwargs)
+        self.broadcast_log.pack(expand=True, fill='both', padx=10, pady=10)
+        self.broadcast_log.configure(state='normal')
+        self.broadcast_log.insert(tk.END, 
+                f"{self.tag}: Loaded Data from {self.params['path']}\n")
+        self.broadcast_log.configure(state='disabled')
+        self.broadcast_log.yview(tk.END)
+
+    def init_from_sweeps(self):
+        # kwargs = {k:v for k, v in self.params.items() if k not in ('updating', 'stride')}
+        kwargs = {k:v for k, v in self.params.items()} 
+        kwargs['verbose'] = self.tag
+        kwargs['dbx'] = self.icon.winfo_toplevel().dbx
+        self.stable = False
+        self.transport_data.init_data_from_sweeps(**kwargs)
+        self.stable = True
+
+    # def update(self):
+    #     kwargs = {k:v for k, v in self.params.items() if k not in ('updating',)}
+    #     kwargs['verbose'] = self.tag
+    #     kwargs['dbx'] = self.icon.winfo_toplevel().dbx
+    #     while self.params['updating']:
+    #         self.stable = False
+    #         self.transport_data.update_data_from_sweeps(**kwargs)
+    #         self.stable = True
+    #         time.sleep(DATA_REFRESH_TIME_SECONDS)
+
+# Plotting Jobs
+#################################################################################################
